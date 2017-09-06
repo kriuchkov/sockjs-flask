@@ -11,15 +11,11 @@ from .transports.utils import cache_headers
 from .transports.rawwebsocket import RawWebSocketTransport
 from . import hdrs
 
-import asyncio
 import json
 import random
-import logging
 import hashlib
 import inspect
 
-
-log = logging.getLogger('sockjs_flask')
 
 
 def get_manager(name, app):
@@ -112,7 +108,7 @@ class SockJSRoute(object):
         except HTTPException as exc:
             return exc
         except Exception as exc:
-            log.exception('Exception in transport: %s' % tid)
+            #log.exception('Exception in transport: %s' % tid)
             if manager.is_acquired(session):
                 manager.release(session)
             return InternalServerError()
@@ -125,8 +121,6 @@ class SockJSRoute(object):
         transport = RawWebSocketTransport(self.manager, session, request)
         try:
             return (yield from transport.process())
-        except asyncio.CancelledError:
-            raise
         except HTTPException as exc:
             return exc
 
@@ -160,7 +154,6 @@ class SockJSRoute(object):
             response.headers[hdrs.CONTENT_TYPE] = ''
             response.headers.extend(cache_headers())
             return response
-
         return Response(response=self.iframe_html,
                         headers=((hdrs.CONTENT_TYPE, 'text/html;charset=UTF-8'),
                                  (hdrs.ETAG, self.iframe_html_hxd),) + cache_headers())

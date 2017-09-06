@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from flask import current_app
 from gevent.event import AsyncResult
 
 
@@ -94,7 +95,7 @@ class Session(object):
 
     def _release(self):
         self.acquired = False
-        self.manager = None
+        #self.manager = None
         self._heartbeat_transport = False
 
     def _heartbeat(self):
@@ -183,7 +184,8 @@ class Session(object):
         for msg in messages:
             log.debug('incoming message: %s, %s', self.id, msg[:200])
             try:
-                self.handler(SockjsMessage(MSG_MESSAGE, msg), self)
+                if self.manager is not None:
+                    self.handler(SockjsMessage(MSG_MESSAGE, msg), self)
             except:
                 log.exception('Exception in message handler.')
 
@@ -321,7 +323,9 @@ class SessionManager(dict):
         session = super(SessionManager, self).get(id, None)
         if session is None:
             if create:
-                session = self._add(self.factory(id, self.handler,timeout=self.timeout,debug=self.debug))
+                session = self._add(
+                    self.factory(id, self.handler, timeout=self.timeout, debug=self.debug)
+                )
             else:
                 if default is not _marker:
                     return default
