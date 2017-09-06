@@ -122,7 +122,6 @@ class Session(object):
         if not self._queue and self.state != STATE_CLOSED:
             assert not self._waiter
             self._waiter = AsyncResult()
-            #self._waiter.get_nowait()
 
         if self._queue:
             frame, payload = self._queue.popleft()
@@ -275,8 +274,7 @@ class SessionManager(dict):
 
     def _heartbeat(self):
         if self._hb_task is None:
-            print(self._heartbeat_task())
-            self._hb_task = gevent.spawn_later(self._heartbeat_task())
+            self._hb_task = gevent.spawn(self._heartbeat_task())
 
     def _heartbeat_task(self):
         sessions = self.sessions

@@ -51,7 +51,7 @@ class StreamingTransport(Transport):
             else:
                 try:
                     while True:
-                        if self.timeout:
+                        if self.session.timeout:
                             try:
                                 frame, text = self.session._wait()
                             except Exception as e:

@@ -20,7 +20,7 @@ class XHRTransport(StreamingTransport):
             headers = list(((hdrs.CONTENT_TYPE, 'application/javascript; charset=UTF-8'),
                            (hdrs.ACCESS_CONTROL_ALLOW_METHODS, 'OPTIONS, POST')) +
                            session_cookie(request) + cors_headers(request.headers) + cache_headers())
-            return Response(status_code=204, headers=headers)
+            return Response(status=204, headers=headers)
 
         headers = list(((hdrs.CONTENT_TYPE, 'application/javascript; charset=UTF-8'),
                        (hdrs.CACHE_CONTROL, CACHE_CONTROL)) + session_cookie(request) + cors_headers(request.headers))
