@@ -43,37 +43,36 @@ class StreamingTransport(Transport):
         elif self.session.state in (STATE_CLOSING, STATE_CLOSED):
             self.session._remote_closed()
             self.send(close_frame(3000, 'Go away!'))
-        #else:
-        #    try:
-        #        self.manager.acquire(self.session)
-        #    except SessionIsAcquired:
-        #        self.send(close_frame(2010, 'Another connection still open'))
-        #    else:
-        #        try:
-        #            while True:
-        #                if self.timeout:
-        #                    try:
-        #                        frame, text = self.session._wait()
-        #                    except Exception as e:
-        #                        frame, text = FRAME_MESSAGE, 'a[]'
-        #                    #except asyncio.futures.TimeoutError:
-        #                    #    frame, text = FRAME_MESSAGE, 'a[]'
-        #                else:
-        #                    frame, text = self.session._wait()
-#
-        #                if frame == FRAME_CLOSE:
-        #                    self.session._remote_closed()
-        #                    self.send(text)
-        #                    return
-        #                else:
-        #                    stop = self.send(text)
-        #                    if stop:
-        #                        break
-        #        #except asyncio.CancelledError:
-        #        #    #yield from self.session._remote_close(exc=aiohttp.ClientConnectionError)
-        #        #    yield from self.session._remote_closed()
-        #        #    raise
-        #        except SessionIsClosed:
-        #            pass
-        #        finally:
-        #            self.manager.release(self.session)
+        else:
+            try:
+                self.manager.acquire(self.session)
+            except SessionIsAcquired:
+                self.send(close_frame(2010, 'Another connection still open'))
+            else:
+                try:
+                    while True:
+                        if self.timeout:
+                            try:
+                                frame, text = self.session._wait()
+                            except Exception as e:
+                                frame, text = FRAME_MESSAGE, 'a[]'
+                        else:
+                            frame, text = self.session._wait()
+
+                        if frame == FRAME_CLOSE:
+                            self.session._remote_closed()
+                            self.send(text)
+                            return
+                        else:
+                            stop = self.send(text)
+                            if stop:
+                                break
+                except Exception as e:
+                    print(e)
+                    #yield from self.session._remote_close(exc=aiohttp.ClientConnectionError)
+                    #yield from self.session._remote_closed()
+                    raise
+                except SessionIsClosed as e:
+                    pass
+                finally:
+                    self.manager.release(self.session)

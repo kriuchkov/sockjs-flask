@@ -1,8 +1,5 @@
-from flask.views import View
 from flask import Response, request
-
-from werkzeug.wrappers import Request
-from werkzeug.exceptions import Forbidden, InternalServerError, NotFound, HTTPException
+from werkzeug.exceptions import InternalServerError, NotFound, HTTPException
 
 from .session import SessionManager
 from .protocol import IFRAME_HTML
@@ -33,24 +30,17 @@ def _gen_endpoint_name():
     return 'n' + str(random.randint(1000, 9999))
 
 
-def add_endpoint(app, handler, *, name='', prefix='/sockjs',
-                 manager=None, disable_transports=(),
-                 sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js',
-                 cookie_needed=True):
+def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disable_transports=(),
+                 sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js', cookie_needed=True):
 
     assert callable(handler), handler
-    if (not asyncio.iscoroutinefunction(handler) and
-            not inspect.isgeneratorfunction(handler)):
-        handler = asyncio.coroutine(handler)
-
     router = app.add_url_rule
 
     if not name:
         name = _gen_endpoint_name()
 
     if manager is None:
-        loop = asyncio.get_event_loop()
-        manager = SessionManager(name, app, handler, loop, debug=True)
+        manager = SessionManager(name, app, handler, debug=app.debug, )
 
     if manager.name != name:
         raise ValueError('Session manage must have same name as sockjs route')

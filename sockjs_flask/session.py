@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+from gevent.event import AsyncResult
+
 
 from .protocol import STATE_NEW, STATE_OPEN, STATE_CLOSING, STATE_CLOSED
 from .protocol import FRAME_OPEN, FRAME_CLOSE
@@ -11,6 +13,7 @@ from .protocol import SockjsMessage, OpenMessage, ClosedMessage
 
 import collections
 import logging
+import gevent
 
 log = logging.getLogger('sockjs')
 
@@ -118,8 +121,8 @@ class Session(object):
     def _wait(self, pack=True):
         if not self._queue and self.state != STATE_CLOSED:
             assert not self._waiter
-            #self._waiter = asyncio.Future(loop=self.loop)
-            #self._waiter
+            self._waiter = AsyncResult()
+            #self._waiter.get_nowait()
 
         if self._queue:
             frame, payload = self._queue.popleft()
@@ -128,7 +131,6 @@ class Session(object):
                     return FRAME_CLOSE, close_frame(*payload)
                 elif frame == FRAME_MESSAGE:
                     return FRAME_MESSAGE, messages_frame(payload)
-
             return frame, payload
         else:
             raise SessionIsClosed()
@@ -260,9 +262,8 @@ class SessionManager(dict):
         return self._hb_handle is not None
 
     def start(self):
-        pass
-        #if not self._hb_handle:
-        #    self._hb_handle = self.loop.call_later(self.heartbeat, self._heartbeat)
+        if not self._hb_handle:
+            self._hb_handle = gevent.spawn_later(self.heartbeat, self._heartbeat)
 
     def stop(self):
         if self._hb_handle is not None:
@@ -273,9 +274,9 @@ class SessionManager(dict):
             self._hb_task = None
 
     def _heartbeat(self):
-        print('_heartbeat')
-        #if self._hb_task is None:
-        #    self._hb_task = asyncio.ensure_future(self._heartbeat_task(), loop=self.loop)
+        if self._hb_task is None:
+            print(self._heartbeat_task())
+            self._hb_task = gevent.spawn_later(self._heartbeat_task())
 
     def _heartbeat_task(self):
         sessions = self.sessions
@@ -291,13 +292,12 @@ class SessionManager(dict):
                     session._heartbeat()
 
                 elif session.expires < now:
-                    # Session is to be GC'd immedietely
                     if session.id in self.acquired:
-                        yield from self.release(session)
+                        self.release(session)
                     if session.state == STATE_OPEN:
-                        yield from session._remote_close()
+                        session._remote_close()
                     if session.state == STATE_CLOSING:
-                        yield from session._remote_closed()
+                        session._remote_closed()
 
                     del self[session.id]
                     del self.sessions[idx]
@@ -306,8 +306,7 @@ class SessionManager(dict):
                 idx += 1
 
         self._hb_task = None
-        #self._hb_handle = self.loop.call_later(
-        #    self.heartbeat, self._heartbeat)
+        self._hb_handle = gevent.spawn_later(self.heartbeat, self._heartbeat)
 
     def _add(self, session):
         if session.expired:
