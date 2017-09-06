@@ -25,7 +25,6 @@ class XHRTransport(StreamingTransport):
         headers = list(((hdrs.CONTENT_TYPE, 'application/javascript; charset=UTF-8'),
                        (hdrs.CACHE_CONTROL, CACHE_CONTROL)) + session_cookie(request) + cors_headers(request.headers))
 
-        resp = self.response = Response(headers=headers)
-        #yield from resp.prepare(request)
-       # yield from self.handle_session()
-        return resp
+        response = self.response = Response(headers=headers)
+        self.handle_session()
+        return response

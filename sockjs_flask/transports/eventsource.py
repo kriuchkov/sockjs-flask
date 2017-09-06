@@ -26,7 +26,6 @@ class EventsourceTransport(StreamingTransport):
                         (hdrs.CACHE_CONTROL, CACHE_CONTROL)) + session_cookie(self.request))
         # open sequence (sockjs protocol)
         response = self.response = Response(headers=headers, direct_passthrough=True)
-        #response.prepare(self.request)
         response.stream.write(b'\r\n')
         self.handle_session()
         return response

@@ -44,7 +44,6 @@ class JSONPolling(StreamingTransport):
                             (hdrs.CACHE_CONTROL, CACHE_CONTROL)) + session_cookie(request) + cors_headers(request.headers))
 
             resp = self.response = Response(headers=headers)
-            #yield from resp.prepare(request)
             self.handle_session()
             return resp
 
@@ -66,7 +65,7 @@ class JSONPolling(StreamingTransport):
             except:
                 return InternalServerError(description='Broken JSON encoding.')
 
-            #yield from session._remote_messages(messages)
+            session._remote_messages(messages)
             return Response(response='ok', headers=((hdrs.CONTENT_TYPE, 'text/plain; charset=UTF-8'),
                                                     (hdrs.CACHE_CONTROL, CACHE_CONTROL)) + session_cookie(request))
 

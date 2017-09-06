@@ -23,7 +23,6 @@ class XHRStreamingTransport(StreamingTransport):
         # open sequence (sockjs protocol)
         response = self.response = Response(headers=headers)
         response.close()
-        #yield from resp.prepare(request)
         response.stream.write(self.open_seq)
         self.handle_session()
         return response
