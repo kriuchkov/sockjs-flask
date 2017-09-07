@@ -8,12 +8,12 @@ from .xhrstreaming import XHRStreamingTransport
 
 
 handlers = {
-     # 'websocket': (True, WebSocketTransport),
-      'xhr': (True, XHRTransport),
-      'xhr_send': (True, XHRSendTransport),
-     # 'xhr_streaming': (True, XHRStreamingTransport),
-    #  'jsonp': (True, JSONPolling),
-    #  'jsonp_send': (False, JSONPolling),
-    #  'htmlfile': (True, HTMLFileTransport),
-     # 'eventsource': (True, EventsourceTransport),
+      'websocket': (True, WebSocketTransport),
+      #'xhr': (True, XHRTransport),
+      #'xhr_send': (True, XHRSendTransport),
+      #'xhr_streaming': (True, XHRStreamingTransport),
+      #'jsonp': (True, JSONPolling),
+      #'jsonp_send': (False, JSONPolling),
+      #'htmlfile': (True, HTMLFileTransport),
+      #'eventsource': (True, EventsourceTransport),
 }

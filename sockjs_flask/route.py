@@ -15,6 +15,7 @@ import json
 import random
 import hashlib
 import inspect
+import gevent
 
 
 
@@ -108,7 +109,6 @@ class SockJSRoute(object):
         except HTTPException as exc:
             return exc
         except Exception as exc:
-            #log.exception('Exception in transport: %s' % tid)
             if manager.is_acquired(session):
                 manager.release(session)
             return InternalServerError()
@@ -117,7 +117,6 @@ class SockJSRoute(object):
         # session
         sid = '%0.9d' % random.randint(1, 2147483647)
         session = self.manager.get(sid, True, request=request)
-
         transport = RawWebSocketTransport(self.manager, session, request)
         try:
             return (yield from transport.process())
@@ -138,7 +137,7 @@ class SockJSRoute(object):
         return resp
 
     def info_options(self):
-        resp = Response(status_code=204)
+        resp = Response(status12=204)
         resp.headers[hdrs.CONTENT_TYPE] = 'application/json;charset=UTF-8'
         resp.headers[hdrs.CACHE_CONTROL] = CACHE_CONTROL
         resp.headers[hdrs.ACCESS_CONTROL_ALLOW_METHODS] = 'OPTIONS, GET'
