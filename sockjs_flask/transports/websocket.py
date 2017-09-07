@@ -1,6 +1,4 @@
-from flask import Flask, Response, request
-from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
-from gevent.socket import create_connection
+from flask import Response, request
 
 from .base import Transport
 from ..exceptions import SessionIsClosed
@@ -45,28 +43,35 @@ class WebSocketTransport(Transport):
                     session._remote_closed()
                     ws.close(message=b'broken json')
                     break
+                session._remote_message(text)
+            else:
+                session._remote_close()
 
     def process(self):
-        # start websocket connection
         if request.environ.get('wsgi.websocket'):
             ws = request.environ['wsgi.websocket']
-            try:
-                self.manager.acquire(self.session)
-            except:
-               ws.send(close_frame(3000, 'Go away!'))
-               ws.close()
-            server = gevent.spawn(self.server, ws, self.session)
-            client = gevent.spawn(self.client, ws, self.session)
-            try:
-                gevent.joinall([server, client])
-            except Exception as exc:
-                self.session._remote_close(exc)
-            finally:
-                self.manager.release(self.session)
-                if server.started():
-                    server.kill()
-                if not client.started():
-                    client.kill()
+            if self.session.interrupted:
+                ws.send(close_frame(1002, 'Connection interrupted'))
+            elif self.session.state == STATE_CLOSED:
+                ws.send(close_frame(3000, 'Go away!'))
+            else:
+                try:
+                    self.manager.acquire(self.session)
+                except:
+                   ws.send(close_frame(3000, 'Go away!'))
+                   ws.close()
+                server = gevent.spawn(self.server, ws, self.session)
+                client = gevent.spawn(self.client, ws, self.session)
+                try:
+                    gevent.joinall([server, client])
+                except Exception as exc:
+                    self.session._remote_close(exc)
+                finally:
+                    self.manager.release(self.session)
+                    if server.started():
+                        server.kill()
+                    if not client.started():
+                        client.kill()
         return Response(direct_passthrough=True)
 
 

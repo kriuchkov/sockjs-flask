@@ -84,7 +84,7 @@ class Session(object):
             self.state = STATE_OPEN
             self._feed(FRAME_OPEN, FRAME_OPEN)
             try:
-                self.handler(OpenMessage, self)
+                gevent.spawn(self.handler, OpenMessage, self)
             except Exception as exc:
                 self.state = STATE_CLOSING
                 self.exception = exc
@@ -147,7 +147,7 @@ class Session(object):
             self.exception = exc
             self.interrupted = True
         try:
-            self.handler(SockjsMessage(MSG_CLOSE, exc), self)
+            gevent.spawn(self.handler, SockjsMessage(MSG_CLOSE, exc), self)
         except:
             log.exception('Exception in close handler.')
 
@@ -159,11 +159,10 @@ class Session(object):
         self.state = STATE_CLOSED
         self.expire()
         try:
-            self.handler(ClosedMessage, self)
+            gevent.spawn(self.handler, ClosedMessage, self)
         except:
             log.exception('Exception in closed handler.')
 
-        # notify waiter
         waiter = self._waiter
         if waiter is not None:
             self._waiter = None
@@ -174,7 +173,7 @@ class Session(object):
         log.debug('incoming message: %s, %s', self.id, msg[:200])
         self._tick()
         try:
-            self.handler(SockjsMessage(MSG_MESSAGE, msg), self)
+            gevent.spawn(self.handler, SockjsMessage(MSG_MESSAGE, msg), self)
         except:
             log.exception('Exception in message handler.')
 
@@ -184,7 +183,7 @@ class Session(object):
             log.debug('incoming message: %s, %s', self.id, msg[:200])
             try:
                 if self.manager is not None:
-                    self.handler(SockjsMessage(MSG_MESSAGE, msg), self)
+                    gevent.spawn(self.handler, SockjsMessage(MSG_MESSAGE, msg), self)
             except:
                 log.exception('Exception in message handler.')
 
@@ -292,11 +291,11 @@ class SessionManager(dict):
 
                 elif session.expires < now:
                     if session.id in self.acquired:
-                        self.release(session)
+                        gevent.spawn(self.release, session)
                     if session.state == STATE_OPEN:
-                        session._remote_close()
+                        gevent.spawn(session._remote_close)
                     if session.state == STATE_CLOSING:
-                        session._remote_closed()
+                        gevent.spawn(session._remote_closed)
 
                     del self[session.id]
                     del self.sessions[idx]
@@ -356,17 +355,17 @@ class SessionManager(dict):
                 yield session
 
     def clear(self):
-        """Manually expire all sessions in the pool."""
+        """
+         Manually expire all sessions in the pool.
+        """
         for session in list(self.values()):
             if session.state != STATE_CLOSED:
-                yield from session._remote_closed()
-
+                session._remote_closed()
         self.sessions.clear()
         super(SessionManager, self).clear()
 
     def broadcast(self, message):
         blob = message_frame(message)
-
         for session in self.values():
             if not session.expired:
                 session.send_frame(blob)
