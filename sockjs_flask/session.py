@@ -94,7 +94,7 @@ class Session(object):
 
     def _release(self):
         self.acquired = False
-        #self.manager = None
+        self.manager = None
         self._heartbeat_transport = False
 
     def _heartbeat(self):

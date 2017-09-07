@@ -11,28 +11,19 @@ from .. import hdrs
 import gevent
 
 
-class EchoApplication(WebSocketApplication):
-    def on_open(self):
-        print( "Connection opened")
-
-    def on_message(self, message):
-        self.ws.send(message)
-
-    def on_close(self, reason):
-        print( reason)
-
 class WebSocketTransport(Transport):
     """
     websocket transport
     """
 
     def server(self, ws, session):
-      while True:
-        try:
-            frame, data = session._wait()
-        except SessionIsClosed:
-            break
-        ws.stream.send_str(data)
+        while True:
+            try:
+                frame, data = session._wait()
+                ws.send(data)
+            except SessionIsClosed:
+                break
+        #message = ws.receive()
         if frame == FRAME_CLOSE:
             try:
                 ws.close()
@@ -41,16 +32,12 @@ class WebSocketTransport(Transport):
 
     def client(self, ws, session):
         while True:
-            msg = ws.receive()
-
-            if msg.tp == hdrs.WSMsgType.text:
-                data = msg.data
+            if not ws.closed:
+                data = ws.receive()
                 if not data:
                     continue
-
                 if data.startswith('['):
                     data = data[1:-1]
-
                 try:
                     text = loads(data)
                 except Exception as exc:
@@ -59,18 +46,44 @@ class WebSocketTransport(Transport):
                     ws.close(message=b'broken json')
                     break
 
-                session._remote_message(text)
-
-            elif msg.tp == hdrs.WSMsgType.close:
-                session._remote_close()
-            elif msg.tp == hdrs.WSMsgType.closed:
-                session._remote_closed()
-                break
-
     def process(self):
-        pass
         # start websocket connection
-        ws = self.ws = Response()
+        if request.environ.get('wsgi.websocket'):
+            ws = request.environ['wsgi.websocket']
+            try:
+                self.manager.acquire(self.session)
+            except:
+               ws.send(close_frame(3000, 'Go away!'))
+               ws.close()
+            server = gevent.spawn(self.server, ws, self.session)
+            client = gevent.spawn(self.client, ws, self.session)
+            try:
+                gevent.joinall([server, client])
+            except Exception as exc:
+                self.session._remote_close(exc)
+            finally:
+                self.manager.release(self.session)
+                if server.started():
+                    server.kill()
+                if not client.started():
+                    client.kill()
+        return Response(direct_passthrough=True)
+
+
+
+
+            #while True:
+            #    message = ws.receive()
+            #    ws.send(message)
+            #    try:
+            #        self.manager.acquire(self.session)
+            #    except Exception as e:
+            #        print(e)
+            #        self.ws.stream.write(close_frame(3000, 'Go away!'))
+            #        ws.close()
+            #        return ws
+                #ws.send(message)
+            #return ws
         ## session was interrupted
         #if self.session.interrupted:
         #    self.ws.stream.write(close_frame(1002, 'Connection interrupted'))
@@ -85,8 +98,8 @@ class WebSocketTransport(Transport):
         #        ws.close()
         #        return ws
 ###
-        #    #server = gevent.spawn(self.server(ws, self.session))
-        #    #client = gevent.spawn(self.client(ws, self.session))
+        #    #
+        #    #
         #    #try:
         #    #    gevent.wait((server, client))
         #    #except Exception as exc:
@@ -97,4 +110,3 @@ class WebSocketTransport(Transport):
         #    #        server.cancel()
             #    if not client.done():
             #        client.cancel()
-        return ws
