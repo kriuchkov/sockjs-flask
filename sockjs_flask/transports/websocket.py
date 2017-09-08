@@ -7,45 +7,68 @@ from ..protocol import loads, close_frame
 from .. import hdrs
 
 import gevent
+import logging
+import time
+
+log = logging.getLogger('sockjs_flask')
 
 
 class WebSocketTransport(Transport):
     """
     websocket transport
     """
-
     def server(self, ws, session):
+        log.info('started websocket server: %s', self.session.id)
         while True:
             try:
                 frame, data = session._wait()
                 ws.send(data)
-            except SessionIsClosed:
-                break
-        #message = ws.receive()
-        if frame == FRAME_CLOSE:
-            try:
-                ws.close()
-            finally:
-                session._remote_closed()
+            except SessionIsClosed as e:
+                time.sleep(2)
+                pass
+            if frame == FRAME_CLOSE:
+                log.info('closed websocket server: %s', self.session.id)
+                try:
+                    ws.close()
+                finally:
+                    session._remote_closed()
+            #try:
+            #    log.info('frame for websocket server: %s', self.session.id)
+            #
+            #except SessionIsClosed:
+            #    break
+            #if frame == FRAME_CLOSE:
+            #    log.info('closed websocket server: %s', self.session.id)
+            #    try:
+            #        ws.close()
+            #    finally:
+            #        session._remote_closed()
 
     def client(self, ws, session):
+        log.info('started websocket client: %s', self.session.id)
         while True:
+            log.info('frame for websocket client: {} whit session closed {}'.format(self.session.id, ws.closed))
             if not ws.closed:
                 data = ws.receive()
                 if not data:
                     continue
+
                 if data.startswith('['):
                     data = data[1:-1]
+
                 try:
                     text = loads(data)
                 except Exception as exc:
                     session._remote_close(exc)
                     session._remote_closed()
-                    ws.close(message=b'broken json')
+                    ws.close(message='broken json')
                     break
+
                 session._remote_message(text)
             else:
                 session._remote_close()
+                session._remote_closed()
+                break
 
     def process(self):
         if request.environ.get('wsgi.websocket'):
@@ -62,16 +85,17 @@ class WebSocketTransport(Transport):
                    ws.close()
                 server = gevent.spawn(self.server, ws, self.session)
                 client = gevent.spawn(self.client, ws, self.session)
-                try:
-                    gevent.joinall([server, client])
-                except Exception as exc:
-                    self.session._remote_close(exc)
-                finally:
-                    self.manager.release(self.session)
-                    if server.started():
-                        server.kill()
-                    if not client.started():
-                        client.kill()
+                gevent.joinall([client, ])
+                #try:
+                #   gevent.joinall([server, client])
+                #except Exception as exc:
+                #    self.session._remote_close(exc)
+                #finally:
+                #    self.manager.release(self.session)
+                #    if server.started():
+                #        server.kill()
+                #    if not client.started():
+                #        client.kill()
         return Response(direct_passthrough=True)
 
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from gevent.event import AsyncResult
+from gevent.queue import Channel, Queue
 
 
 from .protocol import STATE_NEW, STATE_OPEN, STATE_CLOSING, STATE_CLOSED
@@ -15,7 +16,7 @@ import collections
 import logging
 import gevent
 
-log = logging.getLogger('sockjs')
+log = logging.getLogger('sockjs_flask')
 
 
 class Session(object):
@@ -32,7 +33,7 @@ class Session(object):
     interrupted = False
     exception = None
 
-    def __init__(self, id, handler, *, timeout=timedelta(seconds=10), debug=True):
+    def __init__(self, id, handler, *, timeout=timedelta(seconds=5), debug=True):
         self.id = id
         self.handler = handler
         self.expired = False
@@ -43,7 +44,7 @@ class Session(object):
         self._heartbeat_transport = False
         self._debug = debug
         self._waiter = None
-        self._queue = collections.deque()
+        self._queue = Queue()
 
     def __str__(self):
         result = ['id=%r' % (self.id,)]
@@ -70,6 +71,7 @@ class Session(object):
             self.expires = datetime.now() + self.timeout
         else:
             self.expires = datetime.now() + timeout
+        log.info("Update expires time {}".format(self.expires))
 
     def _acquire(self, manager, heartbeat=True):
         self.acquired = True
@@ -105,13 +107,15 @@ class Session(object):
             self._feed(FRAME_HEARTBEAT, FRAME_HEARTBEAT)
 
     def _feed(self, frame, data):
-        if frame == FRAME_MESSAGE:
-            if self._queue and self._queue[-1][0] == FRAME_MESSAGE:
-                self._queue[-1][1].append(data)
-            else:
-                self._queue.append((frame, [data]))
-        else:
-            self._queue.append((frame, data))
+        log.info('session closed: %s', self.id)
+        self._queue.put_nowait((frame, data))
+        #if frame == FRAME_MESSAGE:
+        #    if self._queue and self._queue[-1][0] == FRAME_MESSAGE:
+        #        self._queue[-1][1].append(data)
+        #    else:
+        #        self._queue.append((frame, [data]))
+        #else:
+        #    self._queue.append((frame, data))
         waiter = self._waiter
         if waiter is not None:
             self._waiter = None
@@ -119,12 +123,13 @@ class Session(object):
                 waiter.set_result(True)
 
     def _wait(self, pack=True):
+        log.info("Waiter {} session and queue {}".format(self._waiter, self._queue))
         if not self._queue and self.state != STATE_CLOSED:
             assert not self._waiter
             self._waiter = AsyncResult()
 
         if self._queue:
-            frame, payload = self._queue.popleft()
+            frame, payload = self._queue.get()
             if pack:
                 if frame == FRAME_CLOSE:
                     return FRAME_CLOSE, close_frame(*payload)
@@ -147,7 +152,7 @@ class Session(object):
             self.exception = exc
             self.interrupted = True
         try:
-            gevent.spawn(self.handler, SockjsMessage(MSG_CLOSE, exc), self)
+            self.handler(SockjsMessage(MSG_CLOSE, exc), self)
         except:
             log.exception('Exception in close handler.')
 
@@ -173,7 +178,7 @@ class Session(object):
         log.debug('incoming message: %s, %s', self.id, msg[:200])
         self._tick()
         try:
-            gevent.spawn(self.handler, SockjsMessage(MSG_MESSAGE, msg), self)
+            self.handler(SockjsMessage(MSG_MESSAGE, msg), self)
         except:
             log.exception('Exception in message handler.')
 
@@ -241,7 +246,7 @@ class SessionManager(dict):
     _hb_task = None  # gc task
 
     def __init__(self, name, app, handler,
-                 heartbeat=25.0, timeout=timedelta(seconds=60), debug=False):
+                 heartbeat=25.0, timeout=timedelta(seconds=5), debug=False):
         self.name = name
         self.route_name = 'sockjs-url-%s' % name
         self.app = app
@@ -274,7 +279,7 @@ class SessionManager(dict):
 
     def _heartbeat(self):
         if self._hb_task is None:
-            self._hb_task = gevent.spawn(self._heartbeat_task())
+            self._hb_task = self._heartbeat_task()
 
     def _heartbeat_task(self):
         sessions = self.sessions

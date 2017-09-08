@@ -44,10 +44,8 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
 
     # register routes
     route = SockJSRoute(name, manager, sockjs_cdn, handlers, disable_transports, cookie_needed)
-
     if prefix.endswith('/'):
          prefix = prefix[:-1]
-
     route_name = 'sockjs-url-%s-greeting' % name
     router(prefix, route_name, view_func=route.greeting)
     # Greeting
