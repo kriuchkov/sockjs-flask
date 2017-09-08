@@ -1,4 +1,6 @@
 from flask import Response, request
+from geventwebsocket.exceptions import WebSocketError
+
 
 from .base import Transport
 from ..exceptions import SessionIsClosed
@@ -21,28 +23,20 @@ class WebSocketTransport(Transport):
         log.info('started websocket server: %s', self.session.id)
         while True:
             try:
+                log.info('frame for websocket server: %s', self.session.id)
                 frame, data = session._wait()
                 ws.send(data)
-            except SessionIsClosed as e:
-                time.sleep(2)
-                pass
+            except SessionIsClosed:
+                log.info('Break for websocket server: %s', self.session.id)
+                break
+            except WebSocketError as e:
+                print(ws)
             if frame == FRAME_CLOSE:
-                log.info('closed websocket server: %s', self.session.id)
+                log.warning('closed websocket server: %s', self.session.id)
                 try:
                     ws.close()
                 finally:
                     session._remote_closed()
-            #try:
-            #    log.info('frame for websocket server: %s', self.session.id)
-            #
-            #except SessionIsClosed:
-            #    break
-            #if frame == FRAME_CLOSE:
-            #    log.info('closed websocket server: %s', self.session.id)
-            #    try:
-            #        ws.close()
-            #    finally:
-            #        session._remote_closed()
 
     def client(self, ws, session):
         log.info('started websocket client: %s', self.session.id)
