@@ -1,17 +1,14 @@
 from flask import Response, request
 from geventwebsocket.exceptions import WebSocketError
 
-
 from .base import Transport
 from ..exceptions import SessionIsClosed
 from ..protocol import STATE_CLOSED, FRAME_CLOSE
 from ..protocol import loads, close_frame
-from .. import hdrs
 from .. import protocol
 
 import gevent
 import logging
-import time
 
 
 logging.basicConfig(format='%(asctime)s, %(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d][%(module)s:%(funcName)s] - %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
@@ -20,7 +17,7 @@ log = logging.getLogger('sockjs_flask')
 
 class WebSocketTransport(Transport):
     """
-    websocket transport
+    Websocket transport
     """
     def server(self, ws, session):
         log.info('started websocket server: %s', self.session.id)
@@ -92,11 +89,12 @@ class WebSocketTransport(Transport):
                 except Exception as exc:
                     self.session._remote_close(exc)
                 finally:
+                    log.info('1.5. Finally for process websocket: %s', self.session.id)
                     self.manager.release(self.session)
                     if server.started():
-                        log.info('1.5. Stop server with session: %s', self.session.id)
+                        log.info('1.6. Stop server with session: %s', self.session.id)
                         server.kill()
                     if not client.started():
-                        log.info('1.6. Stop client with session: %s', self.session.id)
+                        log.info('1.7. Stop client with session: %s', self.session.id)
                         client.kill()
         return Response(direct_passthrough=True)
