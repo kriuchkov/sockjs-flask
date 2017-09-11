@@ -12,7 +12,6 @@ from .protocol import MSG_CLOSE, MSG_MESSAGE
 from .protocol import close_frame, message_frame, messages_frame
 from .protocol import SockjsMessage, OpenMessage, ClosedMessage
 
-import collections
 import logging
 import gevent
 
@@ -65,28 +64,25 @@ class Session(object):
         return ' '.join(result)
 
     def _tick(self, timeout=None):
+        log.info("Update expires time {} for session".format(self.expires, self.id))
         self.expired = False
-
         if timeout is None:
             self.expires = datetime.now() + self.timeout
         else:
             self.expires = datetime.now() + timeout
-        log.info("Update expires time {}".format(self.expires))
 
     def _acquire(self, manager, heartbeat=True):
         self.acquired = True
         self.manager = manager
         self._heartbeat_transport = heartbeat
-
         self._tick()
         self._hits += 1
-
         if self.state == STATE_NEW:
             log.debug('open session: %s', self.id)
             self.state = STATE_OPEN
             self._feed(FRAME_OPEN, FRAME_OPEN)
             try:
-                gevent.spawn(self.handler, OpenMessage, self)
+                self.handler(OpenMessage, self)
             except Exception as exc:
                 self.state = STATE_CLOSING
                 self.exception = exc
@@ -141,7 +137,7 @@ class Session(object):
 
     def _remote_close(self, exc=None):
         """
-        close session from remote.
+        Close session from remote.
         """
         if self.state in (STATE_CLOSING, STATE_CLOSED):
             return
@@ -153,7 +149,7 @@ class Session(object):
             self.interrupted = True
         try:
             self.handler(SockjsMessage(MSG_CLOSE, exc), self)
-        except:
+        except Exception as e:
             log.exception('Exception in close handler.')
 
     def _remote_closed(self):
@@ -164,8 +160,8 @@ class Session(object):
         self.state = STATE_CLOSED
         self.expire()
         try:
-            gevent.spawn(self.handler, ClosedMessage, self)
-        except:
+            self.handler(ClosedMessage, self)
+        except Exception as e:
             log.exception('Exception in closed handler.')
 
         waiter = self._waiter
