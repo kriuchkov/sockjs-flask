@@ -7,11 +7,14 @@ from ..exceptions import SessionIsClosed
 from ..protocol import STATE_CLOSED, FRAME_CLOSE
 from ..protocol import loads, close_frame
 from .. import hdrs
+from .. import protocol
 
 import gevent
 import logging
 import time
 
+
+logging.basicConfig(format='%(asctime)s, %(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d][%(module)s:%(funcName)s] - %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
 log = logging.getLogger('sockjs_flask')
 
 
@@ -65,71 +68,35 @@ class WebSocketTransport(Transport):
                 break
 
     def process(self):
+        log.info('1. Run process for websocket with session: %s', self.session.id)
         if request.environ.get('wsgi.websocket'):
             ws = request.environ['wsgi.websocket']
             if self.session.interrupted:
-                ws.send(close_frame(1002, 'Connection interrupted'))
+                ws.send(close_frame(*protocol.CONN_INTERRUPTED))
             elif self.session.state == STATE_CLOSED:
-                ws.send(close_frame(3000, 'Go away!'))
+                ws.send(close_frame(*protocol.CONN_CLOSED))
             else:
                 try:
+                    log.info('1.1. websocket acquire session: %s', self.session.id)
                     self.manager.acquire(self.session)
                 except:
-                   ws.send(close_frame(3000, 'Go away!'))
-                   ws.close()
+                    log.info('1.2. websocket CONN_CLOSED: %s', self.session.id)
+                    ws.send(close_frame(*protocol.CONN_CLOSED))
+                    ws.close()
+                log.info('1.3 Run client and server for websocket: %s', self.session.id)
                 server = gevent.spawn(self.server, ws, self.session)
                 client = gevent.spawn(self.client, ws, self.session)
-                gevent.joinall([client, ])
-                #try:
-                #   gevent.joinall([server, client])
-                #except Exception as exc:
-                #    self.session._remote_close(exc)
-                #finally:
-                #    self.manager.release(self.session)
-                #    if server.started():
-                #        server.kill()
-                #    if not client.started():
-                #        client.kill()
+                try:
+                    log.info('1.4. Gevent waiter : %s', self.session.id)
+                    gevent.joinall([server, client])
+                except Exception as exc:
+                    self.session._remote_close(exc)
+                finally:
+                    self.manager.release(self.session)
+                    if server.started():
+                        log.info('1.5. Stop server with session: %s', self.session.id)
+                        server.kill()
+                    if not client.started():
+                        log.info('1.6. Stop client with session: %s', self.session.id)
+                        client.kill()
         return Response(direct_passthrough=True)
-
-
-
-
-            #while True:
-            #    message = ws.receive()
-            #    ws.send(message)
-            #    try:
-            #        self.manager.acquire(self.session)
-            #    except Exception as e:
-            #        print(e)
-            #        self.ws.stream.write(close_frame(3000, 'Go away!'))
-            #        ws.close()
-            #        return ws
-                #ws.send(message)
-            #return ws
-        ## session was interrupted
-        #if self.session.interrupted:
-        #    self.ws.stream.write(close_frame(1002, 'Connection interrupted'))
-        #elif self.session.state == STATE_CLOSED:
-        #    self.ws.stream.write(close_frame(3000, 'Go away!'))
-###
-        #else:
-        #    try:
-        #        self.manager.acquire(self.session)
-        #    except:
-        #        self.ws.stream.write(close_frame(3000, 'Go away!'))
-        #        ws.close()
-        #        return ws
-###
-        #    #
-        #    #
-        #    #try:
-        #    #    gevent.wait((server, client))
-        #    #except Exception as exc:
-        #    #    self.session._remote_close(exc)
-        #    #finally:
-        #    #    self.manager.release(self.session)
-        #    #    if not server.done():
-        #    #        server.cancel()
-            #    if not client.done():
-            #        client.cancel()
