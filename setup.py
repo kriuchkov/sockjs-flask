@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="sockjs-flask",
-    version="0.1.0",
+    version="0.1.9",
     url="https://github.com/borntyping/cookiecutter-pypackage-minimal",
 
     author="Kryuchkov Nikita",
@@ -13,7 +13,13 @@ setuptools.setup(
 
     packages=setuptools.find_packages(),
 
-    install_requires=[],
+    install_requires=[
+        'gevent>=1.2.2',
+        'gevent-websocket>=0.10.1',
+        'werkzeug',
+        'flask',
+        'multidict'
+    ],
 
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
