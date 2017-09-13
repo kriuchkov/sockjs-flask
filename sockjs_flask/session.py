@@ -19,11 +19,13 @@ log = logging.getLogger('sockjs_flask')
 
 
 class Session(object):
-    """ SockJS session object
-    ``state``: Session state
-    ``manager``: Session manager that hold this session
-    ``acquired``: Acquired state, indicates that transport is using session
-    ``timeout``: Session timeout
+    """
+    Base class for SockJS sessions. Provides a transport independent way to
+    queue messages from/to the client.
+        ``state``: Session state
+        ``manager``: Session manager that hold this session
+        ``acquired``: Acquired state, indicates that transport is using session
+        ``timeout``: Session timeout
     """
 
     manager = None
@@ -32,7 +34,7 @@ class Session(object):
     interrupted = False
     exception = None
 
-    def __init__(self, id, handler, *, timeout=timedelta(seconds=5), debug=True):
+    def __init__(self, id, handler, timeout=timedelta(seconds=5), debug=True):
         self.id = id
         self.handler = handler
         self.expired = False
@@ -64,6 +66,9 @@ class Session(object):
         return ' '.join(result)
 
     def _tick(self, timeout=None):
+        """
+        Bump the TTL of the session.
+        """
         log.info("Update expires time {} for session".format(self.expires, self.id))
         self.expired = False
         if timeout is None:
@@ -80,14 +85,14 @@ class Session(object):
         if self.state == STATE_NEW:
             log.debug('open session: %s', self.id)
             self.state = STATE_OPEN
-            self._feed(FRAME_OPEN, FRAME_OPEN)
+            self.add_message(FRAME_OPEN, FRAME_OPEN)
             try:
                 self.handler(OpenMessage, self)
             except Exception as exc:
                 self.state = STATE_CLOSING
                 self.exception = exc
                 self.interrupted = True
-                self._feed(FRAME_CLOSE, (3000, 'Internal error'))
+                self.add_message(FRAME_CLOSE, (3000, 'Internal error'))
                 log.exception('Exception in open session handling.')
 
     def _release(self):
@@ -100,18 +105,11 @@ class Session(object):
         self._tick()
         self._heartbeats += 1
         if self._heartbeat:
-            self._feed(FRAME_HEARTBEAT, FRAME_HEARTBEAT)
+            self.add_message(FRAME_HEARTBEAT, FRAME_HEARTBEAT)
 
-    def _feed(self, frame, data):
+    def add_message(self, frame, data):
         log.info('session closed: %s', self.id)
         self._queue.put_nowait((frame, data))
-        #if frame == FRAME_MESSAGE:
-        #    if self._queue and self._queue[-1][0] == FRAME_MESSAGE:
-        #        self._queue[-1][1].append(data)
-        #    else:
-        #        self._queue.append((frame, [data]))
-        #else:
-        #    self._queue.append((frame, data))
         waiter = self._waiter
         if waiter is not None:
             self._waiter = None
@@ -178,16 +176,6 @@ class Session(object):
         except:
             log.exception('Exception in message handler.')
 
-    def _remote_messages(self, messages):
-        self._tick()
-        for msg in messages:
-            log.debug('incoming message: %s, %s', self.id, msg[:200])
-            try:
-                if self.manager is not None:
-                    gevent.spawn(self.handler, SockjsMessage(MSG_MESSAGE, msg), self)
-            except:
-                log.exception('Exception in message handler.')
-
     def expire(self):
         self.expired = True
 
@@ -201,7 +189,7 @@ class Session(object):
             return
 
         self._tick()
-        self._feed(FRAME_MESSAGE, msg)
+        self.add_message(FRAME_MESSAGE, msg)
 
     def send_frame(self, frm):
         """
@@ -214,7 +202,7 @@ class Session(object):
             return
 
         self._tick()
-        self._feed(FRAME_MESSAGE_BLOB, frm)
+        self.add_message(FRAME_MESSAGE_BLOB, frm)
 
     def close(self, code=3000, reason='Go away!'):
         """
@@ -227,7 +215,7 @@ class Session(object):
             log.debug('close session: %s', self.id)
 
         self.state = STATE_CLOSING
-        self._feed(FRAME_CLOSE, (code, reason))
+        self.add_message(FRAME_CLOSE, (code, reason))
 
 
 _marker = object()
@@ -242,12 +230,12 @@ class SessionManager(dict):
     _hb_task = None  # gc task
 
     def __init__(self, name, app, handler,
-                 heartbeat=25.0, timeout=timedelta(seconds=5), debug=False):
+                 heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
         self.name = name
         self.route_name = 'sockjs-url-%s' % name
         self.app = app
         self.handler = handler
-        self.factory = Session
+        self.factory = factory
         self.acquired = {}
         self.sessions = []
         self.heartbeat = heartbeat

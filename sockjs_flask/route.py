@@ -9,6 +9,7 @@ from .transports.utils import session_cookie
 from .transports.utils import cors_headers
 from .transports.utils import cache_headers
 from .transports.rawwebsocket import RawWebSocketTransport
+from .sessions.memory import MemorySession
 from . import hdrs
 
 import json
@@ -35,7 +36,7 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
         name = _gen_endpoint_name()
 
     if manager is None:
-        manager = SessionManager(name, app, handler, debug=app.debug, )
+        manager = SessionManager(name, app, handler, factory=MemorySession, debug=app.debug )
 
     if manager.name != name:
         raise ValueError('Session manage must have same name as sockjs route')
