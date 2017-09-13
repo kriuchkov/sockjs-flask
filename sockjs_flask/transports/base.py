@@ -5,7 +5,12 @@ from ..protocol import STATE_CLOSING, STATE_CLOSED, FRAME_CLOSE, FRAME_MESSAGE
 from .. import protocol
 
 
-class Transport:
+class Transport(object):
+    # the direction of the transport. Used in session locking
+    # readable means the endpoint can read messages from the session.
+    readable = False
+    # writable means that the endpoint can send message to the session.
+    writable = False
 
     def __init__(self, manager, session, request):
         self.manager = manager
@@ -17,7 +22,7 @@ class StreamingTransport(Transport):
     """
     Jsonp transport
     """
-
+    writable = True
     timeout = None
     maxsize = 131072
 
@@ -26,6 +31,14 @@ class StreamingTransport(Transport):
 
         self.size = 0
         self.response = None
+
+    @property
+    def socket(self):
+        return self.readable and self.writable
+
+    def get_payload(self):
+        return self.request.environ['wsgi.input'].read()
+
 
     def send(self, text):
         blob = (text + '\n').encode(ENCODING)
