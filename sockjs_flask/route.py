@@ -103,8 +103,10 @@ class SockJSRoute(object):
         try:
             return t.process()
         except HTTPException as exc:
+            print(exc)
             return exc
         except Exception as exc:
+            print(exc)
             if manager.is_acquired(session):
                 manager.release(session)
             return InternalServerError()

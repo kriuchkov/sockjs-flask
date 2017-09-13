@@ -9,9 +9,10 @@ from .xhrstreaming import XHRStreamingTransport
 
 handlers = {
       'websocket': (True, WebSocketTransport),
+       'xhr_streaming': (True, XHRStreamingTransport),
+
       #'xhr': (True, XHRTransport),
       #'xhr_send': (True, XHRSendTransport),
-      #'xhr_streaming': (True, XHRStreamingTransport),
       #'jsonp': (True, JSONPolling),
       #'jsonp_send': (False, JSONPolling),
       #'htmlfile': (True, HTMLFileTransport),

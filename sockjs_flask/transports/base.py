@@ -2,6 +2,8 @@ from ..exceptions import SessionIsAcquired, SessionIsClosed
 from ..protocol import close_frame, ENCODING
 from ..protocol import STATE_CLOSING, STATE_CLOSED, FRAME_CLOSE, FRAME_MESSAGE
 
+from .. import protocol
+
 
 class Transport:
 
@@ -36,18 +38,18 @@ class StreamingTransport(Transport):
             return False
 
     def handle_session(self):
-        assert self.response is not None, 'Response is not specified.'
+        #assert self.response is not None, 'Response is not specified.'
 
         if self.session.interrupted:
-            self.send(close_frame(1002, 'Connection interrupted'))
+            self.send(close_frame(*protocol.CONN_INTERRUPTED))
         elif self.session.state in (STATE_CLOSING, STATE_CLOSED):
             self.session._remote_closed()
-            self.send(close_frame(3000, 'Go away!'))
+            self.send(close_frame(*protocol.CONN_CLOSED))
         else:
             try:
                 self.manager.acquire(self.session)
             except SessionIsAcquired:
-                self.send(close_frame(2010, 'Another connection still open'))
+                self.send(close_frame(*protocol.CONN_ALREADY_OPEN))
             else:
                 try:
                     while True:
@@ -67,12 +69,14 @@ class StreamingTransport(Transport):
                             stop = self.send(text)
                             if stop:
                                 break
-                except Exception as e:
-                    print(e)
-                    #yield from self.session._remote_close(exc=aiohttp.ClientConnectionError)
-                    #yield from self.session._remote_closed()
-                    raise
-                except SessionIsClosed as e:
-                    pass
+                except Exception as exc:
+                    print(exc)
+                    self.session._remote_close(exc=exc)
+                    self.session._remote_closed()
+
+                except SessionIsClosed as exc:
+                    self.session._remote_close(exc=exc)
+                    self.session._remote_closed()
+
                 finally:
                     self.manager.release(self.session)
