@@ -107,20 +107,11 @@ class Session(object):
         if self._heartbeat:
             self.add_message(FRAME_HEARTBEAT, FRAME_HEARTBEAT)
 
-    def add_message(self, frame, data):
-        log.info('session closed: %s', self.id)
-        self._queue.put_nowait((frame, data))
-        waiter = self._waiter
-        if waiter is not None:
-            self._waiter = None
-            if not waiter.cancelled():
-                waiter.set_result(True)
-
     def _wait(self, pack=True):
         log.info("Waiter {} session and queue {}".format(self._waiter, self._queue))
-        if not self._queue and self.state != STATE_CLOSED:
-            assert not self._waiter
-            self._waiter = AsyncResult()
+        #if not self._queue and self.state != STATE_CLOSED:
+        #    assert not self._waiter
+        #    self._waiter = AsyncResult()
 
         if self._queue:
             frame, payload = self._queue.get()
@@ -176,44 +167,49 @@ class Session(object):
         except:
             log.exception('Exception in message handler.')
 
+    def add_message(self, frame, data):
+        log.info('session closed: %s', self.id)
+        self._queue.put_nowait((frame, data))
+        waiter = self._waiter
+        if waiter is not None:
+            self._waiter = None
+            if not waiter.cancelled():
+                waiter.set_result(True)
+
     def expire(self):
         self.expired = True
 
     def send(self, msg):
+        """
+        Send message
+        """
         assert isinstance(msg, str), 'String is required'
-
         if self._debug:
-            log.info('outgoing message: %s, %s', self.id, str(msg)[:200])
-
+            log.info('Оutgoing message from send: %s, %s', self.id, str(msg)[:200])
         if self.state != STATE_OPEN:
             return
-
         self._tick()
         self.add_message(FRAME_MESSAGE, msg)
 
     def send_frame(self, frm):
         """
-        send message frame to client.
+        Send message frame to client.
         """
         if self._debug:
-            log.info('outgoing message: %s, %s', self.id, frm[:200])
-
+            log.info('Оutgoing message from send_frame: %s, %s', self.id, frm[:200])
         if self.state != STATE_OPEN:
             return
-
         self._tick()
         self.add_message(FRAME_MESSAGE_BLOB, frm)
 
     def close(self, code=3000, reason='Go away!'):
         """
-        close session
+        Close session
         """
         if self.state in (STATE_CLOSING, STATE_CLOSED):
             return
-
         if self._debug:
             log.debug('close session: %s', self.id)
-
         self.state = STATE_CLOSING
         self.add_message(FRAME_CLOSE, (code, reason))
 

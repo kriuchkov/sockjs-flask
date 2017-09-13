@@ -7,7 +7,6 @@ import gevent
 log = logging.getLogger('sockjs_flask')
 
 
-
 class MemorySession(session.Session):
     """
     In memory session with a ``gevent.pool.Queue`` as the message store.
