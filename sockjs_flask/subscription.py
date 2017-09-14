@@ -12,6 +12,8 @@ from .database import create_db
 import gevent
 import datetime
 import time
+import weakref
+
 
 logger = get_logger(__name__)
 
@@ -20,10 +22,7 @@ connection_string = 'amqp://guest@localhost//'
 
 
 exchange = Exchange('subscription1', type='direct', auto_delet=True, delivery_mode=1)
-
-priority_to_routing_key = {'high': 'hipri',
-                           'mid': 'midpri',
-                           'low': 'lopri'}
+priority_to_routing_key = {'high': 'hipri', 'mid': 'midpri', 'low': 'lopri'}
 
 queues =[
     Queue('hipri', exchange, routing_key='hipri'),
@@ -34,9 +33,11 @@ queues =[
 
 class SubscriptionWorker(ConsumerMixin):
 
-    def __init__(self, connection, queues):
+    def __init__(self, connection, queues, hub):
+
         self.connection = connection
         self.queues = queues
+        self._hub = hub
 
     def get_consumers(self, Consumer, channel):
         return [Consumer(queues=self.queues, callbacks=[self.process_task,], accept=['pickle',])]
@@ -45,35 +46,38 @@ class SubscriptionWorker(ConsumerMixin):
         fun = body['fun']
         args = body['args']
         kwargs = body['kwargs']
-        logger.info('Got task: %s', reprcall(fun.__name__, args, kwargs))
+        logger.info('Got task: %s', reprcall(fun, args, kwargs))
         try:
+            fun = getattr(self, fun)
             fun(*args, **kwargs)
         except Exception as exc:
             logger.error('task raised exception: %r', exc)
         message.ack()
 
-    @staticmethod
-    def send_frame(msg):
-        print("Hello %s" % (msg,))
+    def send_db(self, *args):
+        channel = args[0]
+        for rec in self._hub.database('channel') == channel:
+            session = rec['sid']
+            session().send_frame('221')
 
 
 class SubscriptionHub(object):
 
     def __init__(self, manager):
+        self.database = create_db()
         self._manager = manager
         self._worker = SubscriptionWorker
-        self.database = create_db()
 
     def _consumer(self):
         try:
             with Connection(connection_string) as conn:
-                self._worker(conn, queues).run()
+                self._worker(conn, queues, self).run()
         except KeyboardInterrupt:
             print('bye bye')
 
-    def _publisher(self, msg):
+    def _publisher(self, channel, msg):
         with Connection(connection_string) as conn:
-            self._send_to_channel(conn, fun=self._worker.send_frame, args=(msg, ), kwargs={}, priority='high')
+            self._send_to_channel(conn, fun='send_db', args=(channel, msg), kwargs={}, priority='high')
             conn.close()
 
     @staticmethod
@@ -88,6 +92,12 @@ class SubscriptionHub(object):
         gevent.spawn(self._consumer)
         return self
 
-    def feed(self, msg):
-        gevent.spawn(self._publisher, msg)
+    def feed(self, channel, msg):
+        gevent.spawn(self._publisher, channel, msg)
+
+    def subscribe(self, session, channel):
+        self.database.insert(sid=weakref.ref(session), channel=channel)
+        gevent.spawn(self._publisher, channel, '32')
+
+
 
