@@ -11,10 +11,12 @@ from .exceptions import SessionIsAcquired, SessionIsClosed
 from .protocol import MSG_CLOSE, MSG_MESSAGE
 from .protocol import close_frame, message_frame, messages_frame
 from .protocol import SockjsMessage, OpenMessage, ClosedMessage
-from .database import create_db
+
+from .subscription import SubscriptionHub
 
 import logging
 import gevent
+import kombu
 
 log = logging.getLogger('sockjs_flask')
 
@@ -217,6 +219,12 @@ class Session(object):
 
 _marker = object()
 
+exchange = kombu.Exchange('subscription', type='topic', auto_delet=True, delivery_mode=1)
+
+_queues =[
+    kombu.Queue('video', exchange=exchange, key='video')
+]
+
 
 class SessionManager(dict):
     """
@@ -226,19 +234,24 @@ class SessionManager(dict):
     _hb_handle = None  # heartbeat event loop timer
     _hb_task = None  # gc task
 
-    def __init__(self, name, app, handler,
-                 heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
+    def __init__(self, name, app, handler, heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
         self.name = name
         self.route_name = 'sockjs-url-%s' % name
         self.app = app
         self.handler = handler
         self.factory = factory
-        self.database = create_db()
+        self.hub = None
         self.acquired = {}
         self.sessions = []
         self.heartbeat = heartbeat
         self.timeout = timeout
         self.debug = debug
+
+    def _hub(self):
+        self.hub = SubscriptionHub(self).start()
+        #with kombu.Connection('amqp://guest@localhost/') as conn:
+        #    SubscriptionWorker(conn, _queues).run()
+
 
     def route_url(self, request):
         return request.route_url(self.route_name)
@@ -250,6 +263,8 @@ class SessionManager(dict):
     def start(self):
         if not self._hb_handle:
             self._hb_handle = gevent.spawn_later(self.heartbeat, self._heartbeat)
+        if not self.hub:
+            self._hub()
 
     def stop(self):
         if self._hb_handle is not None:
