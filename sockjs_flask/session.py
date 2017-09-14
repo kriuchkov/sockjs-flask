@@ -11,6 +11,7 @@ from .exceptions import SessionIsAcquired, SessionIsClosed
 from .protocol import MSG_CLOSE, MSG_MESSAGE
 from .protocol import close_frame, message_frame, messages_frame
 from .protocol import SockjsMessage, OpenMessage, ClosedMessage
+from .database import create_db
 
 import logging
 import gevent
@@ -232,6 +233,7 @@ class SessionManager(dict):
         self.app = app
         self.handler = handler
         self.factory = factory
+        self.database = create_db()
         self.acquired = {}
         self.sessions = []
         self.heartbeat = heartbeat
