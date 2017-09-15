@@ -26,7 +26,7 @@ def _gen_endpoint_name():
     return 'n' + str(random.randint(1000, 9999))
 
 
-def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disable_transports=(),
+def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disable_transports=(), broker_url='',
                  sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js', cookie_needed=True):
 
     assert callable(handler), handler
@@ -36,7 +36,7 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
         name = _gen_endpoint_name()
 
     if manager is None:
-        manager = SessionManager(name, app, handler, factory=MemorySession, debug=app.debug )
+        manager = SessionManager(name, app, handler, broker_url=broker_url, factory=MemorySession, debug=app.debug )
 
     if manager.name != name:
         raise ValueError('Session manage must have same name as sockjs route')

@@ -18,7 +18,6 @@ import weakref
 logger = get_logger(__name__)
 
 
-connection_string = 'amqp://guest@localhost//'
 
 
 exchange = Exchange('subscription1', type='direct', auto_delet=True, delivery_mode=1)
@@ -64,20 +63,21 @@ class SubscriptionWorker(ConsumerMixin):
 
 class SubscriptionHub(object):
 
-    def __init__(self, manager):
+    def __init__(self, manager, connection_string):
         self.database = create_db()
         self._manager = manager
         self._worker = SubscriptionWorker
+        self._connection = connection_string
 
     def _consumer(self):
         try:
-            with Connection(connection_string) as conn:
+            with Connection(self._connection) as conn:
                 self._worker(conn, queues, self).run()
         except KeyboardInterrupt:
             print('bye bye')
 
     def _publisher(self, channel, msg):
-        with Connection(connection_string) as conn:
+        with Connection(self._connection) as conn:
             self._send_to_channel(conn, fun='send_db', args=(channel, msg), kwargs={}, priority='high')
             conn.close()
 

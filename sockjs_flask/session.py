@@ -234,7 +234,7 @@ class SessionManager(dict):
     _hb_handle = None  # heartbeat event loop timer
     _hb_task = None  # gc task
 
-    def __init__(self, name, app, handler, heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
+    def __init__(self, name, app, handler, broker_url=None, heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
         self.name = name
         self.route_name = 'sockjs-url-%s' % name
         self.app = app
@@ -246,9 +246,11 @@ class SessionManager(dict):
         self.heartbeat = heartbeat
         self.timeout = timeout
         self.debug = debug
+        self.broker_url = broker_url
+
 
     def _hub(self):
-        self.hub = SubscriptionHub(self).start()
+        self.hub = SubscriptionHub(self, self.broker_url).start()
         #with kombu.Connection('amqp://guest@localhost/') as conn:
         #    SubscriptionWorker(conn, _queues).run()
 
