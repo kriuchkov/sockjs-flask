@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from gevent.event import AsyncResult
 from gevent.queue import Channel, Queue
 
 
@@ -234,13 +233,13 @@ class SessionManager(dict):
     _hb_handle = None  # heartbeat event loop timer
     _hb_task = None  # gc task
 
-    def __init__(self, name, app, handler, broker_url=None, heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
+    def __init__(self, name, app, handler, broker_url=None, hub=None, heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
         self.name = name
         self.route_name = 'sockjs-url-%s' % name
         self.app = app
         self.handler = handler
         self.factory = factory
-        self.hub = None
+        self.hub = hub
         self.acquired = {}
         self.sessions = []
         self.heartbeat = heartbeat
@@ -248,25 +247,51 @@ class SessionManager(dict):
         self.debug = debug
         self.broker_url = broker_url
 
-
-    def _hub(self):
-        self.hub = SubscriptionHub(self, self.broker_url).start()
-        #with kombu.Connection('amqp://guest@localhost/') as conn:
-        #    SubscriptionWorker(conn, _queues).run()
-
-
-    def route_url(self, request):
-        return request.route_url(self.route_name)
-
     @property
     def started(self):
         return self._hb_handle is not None
 
+    def _hub(self):
+        """ Initialization subscription hub """
+        if not self.hub:
+            self.hub = SubscriptionHub(self, self.broker_url).start()
+
+    def _heartbeat(self):
+        """ Initialization heartbeat with gevent """
+        if self._hb_task is None:
+            self._hb_task = gevent.spawn(self._heartbeat_task)
+
+    def _heartbeat_task(self):
+        sessions = self.sessions
+        if sessions:
+            now = datetime.now()
+            idx = 0
+            while idx < len(sessions):
+                session = sessions[idx]
+                if session.acquired:
+                    session._heartbeat()
+                elif session.expires < now:
+                    log.info('Session {} to go GC immediately'.format(session))
+                    if session.id in self.acquired:
+                        gevent.spawn(self.release, session)
+                    if session.state == STATE_OPEN:
+                        gevent.spawn(session._remote_close)
+                    if session.state == STATE_CLOSING:
+                        gevent.spawn(session._remote_closed)
+                    del self[session.id]
+                    del self.sessions[idx]
+                    continue
+                idx += 1
+        self._hb_task = None
+        self._hb_handle = gevent.spawn_later(self.heartbeat, self._heartbeat)
+
+    def route_url(self, request):
+        return request.route_url(self.route_name)
+
     def start(self):
         if not self._hb_handle:
             self._hb_handle = gevent.spawn_later(self.heartbeat, self._heartbeat)
-        if not self.hub:
-            self._hub()
+        self._hub()
 
     def stop(self):
         if self._hb_handle is not None:
@@ -275,40 +300,6 @@ class SessionManager(dict):
         if self._hb_task is not None:
             self._hb_task.cancel()
             self._hb_task = None
-
-    def _heartbeat(self):
-        if self._hb_task is None:
-            self._hb_task = self._heartbeat_task()
-
-    def _heartbeat_task(self):
-        sessions = self.sessions
-
-        if sessions:
-            now = datetime.now()
-
-            idx = 0
-            while idx < len(sessions):
-                session = sessions[idx]
-
-                if session.acquired:
-                    session._heartbeat()
-
-                elif session.expires < now:
-                    if session.id in self.acquired:
-                        gevent.spawn(self.release, session)
-                    if session.state == STATE_OPEN:
-                        gevent.spawn(session._remote_close)
-                    if session.state == STATE_CLOSING:
-                        gevent.spawn(session._remote_closed)
-
-                    del self[session.id]
-                    del self.sessions[idx]
-                    continue
-
-                idx += 1
-
-        self._hb_task = None
-        self._hb_handle = gevent.spawn_later(self.heartbeat, self._heartbeat)
 
     def _add(self, session):
         if session.expired:

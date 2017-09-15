@@ -30,7 +30,7 @@ class WebSocketTransport(Transport):
                 log.info('Break for websocket server: %s', self.session.id)
                 break
             except WebSocketError as e:
-                print(ws)
+                break
             if frame == FRAME_CLOSE:
                 log.warning('closed websocket server: %s', self.session.id)
                 try:
@@ -91,10 +91,10 @@ class WebSocketTransport(Transport):
                 finally:
                     log.info('1.5. Finally for process websocket: %s', self.session.id)
                     self.manager.release(self.session)
-                    if server.started():
+                    if server.started:
                         log.info('1.6. Stop server with session: %s', self.session.id)
                         server.kill()
-                    if not client.started():
+                    if client.started:
                         log.info('1.7. Stop client with session: %s', self.session.id)
                         client.kill()
         return Response(direct_passthrough=True)
