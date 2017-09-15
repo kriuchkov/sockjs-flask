@@ -97,7 +97,7 @@ class SubscriptionHub(object):
 
     def subscribe(self, session, channel):
         self.database.insert(sid=weakref.ref(session), channel=channel)
-        gevent.spawn(self._publisher, channel, '32')
+        #gevent.spawn(self._publisher, channel, '32')
 
 
 

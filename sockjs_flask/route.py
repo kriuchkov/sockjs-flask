@@ -65,6 +65,7 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
     # Sockjs-iframe-ver
     route_name = 'sockjs-iframe-ver-%s' % name
     router('%s/iframe{version}.html' % prefix, route_name, view_func=route.iframe, methods=[hdrs.METH_GET, ])
+    app.sockjs_manager = manager
     manager.start()
 
 
