@@ -5,7 +5,7 @@ from kombu.pools import producers
 from kombu.utils import  reprcall
 from kombu.log import get_logger
 
-
+from .protocol import message_frame
 from .database import create_db
 
 
@@ -56,9 +56,10 @@ class SubscriptionWorker(ConsumerMixin):
 
     def send_db(self, *args):
         channel = args[0]
+        message = args[1]
         for rec in self._hub.database('channel') == channel:
             session = rec['sid']
-            session().send_frame('221')
+            session().send_frame(message_frame(message))
 
 
 class SubscriptionHub(object):

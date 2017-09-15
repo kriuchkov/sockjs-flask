@@ -2,12 +2,10 @@ import collections
 import hashlib
 from datetime import datetime
 
-
 # known error code/message
 CONN_INTERRUPTED = (1002, "Connection interrupted")
 CONN_ALREADY_OPEN = (2010, "Another connection still open")
 CONN_CLOSED = (3000, "Go away!")
-
 
 ENCODING = 'utf-8'
 

@@ -25,10 +25,10 @@ class Session(object):
     """
     Base class for SockJS sessions. Provides a transport independent way to
     queue messages from/to the client.
-        ``state``: Session state
-        ``manager``: Session manager that hold this session
-        ``acquired``: Acquired state, indicates that transport is using session
-        ``timeout``: Session timeout
+    ``state``: Session state
+    ``manager``: Session manager that hold this session
+    ``acquired``: Acquired state, indicates that transport is using session
+    ``timeout``: Session timeout
     """
 
     manager = None
