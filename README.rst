@@ -9,7 +9,7 @@ sockjs-flask
    :target: https://travis-ci.org/borntyping/cookiecutter-pypackage-minimal
    :alt: Latest Travis CI build status
 
-SockJs for Flask
+Unfinished SockJs server for Flask with gevent
 
 Usage
 -----
