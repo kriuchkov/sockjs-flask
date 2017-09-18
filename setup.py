@@ -14,8 +14,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
 
     install_requires=[
-        'gevent>=1.2.2',
-        'gevent-websocket>=0.10.1',
+        'gevent',
+        'gevent-websocket',
         'werkzeug',
         'flask',
         'multidict',
