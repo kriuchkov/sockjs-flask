@@ -19,7 +19,6 @@ setuptools.setup(
         'werkzeug',
         'flask',
         'multidict',
-        'eventwebsocket'
     ],
 
     classifiers=[
