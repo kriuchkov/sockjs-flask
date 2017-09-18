@@ -18,7 +18,8 @@ setuptools.setup(
         'gevent-websocket>=0.10.1',
         'werkzeug',
         'flask',
-        'multidict'
+        'multidict',
+        'eventwebsocket'
     ],
 
     classifiers=[

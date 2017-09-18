@@ -10,14 +10,10 @@ from .database import create_db
 
 
 import gevent
-import datetime
-import time
 import weakref
 
 
 logger = get_logger(__name__)
-
-
 
 
 exchange = Exchange('subscription1', type='direct', auto_delet=True, delivery_mode=1)

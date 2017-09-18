@@ -39,7 +39,6 @@ class StreamingTransport(Transport):
     def get_payload(self):
         return self.request.environ['wsgi.input'].read()
 
-
     def send(self, text):
         blob = (text + '\n').encode(ENCODING)
         self.response.stream.write(blob)

@@ -262,6 +262,7 @@ class SessionManager(dict):
             self._hb_task = gevent.spawn(self._heartbeat_task)
 
     def _heartbeat_task(self):
+        log.info('Run heartbeat task in {}'.format(datetime.now()))
         sessions = self.sessions
         if sessions:
             now = datetime.now()

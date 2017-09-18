@@ -7,8 +7,15 @@ from .. import hdrs
 
 import gevent
 import logging
+import time
 
 log = logging.getLogger('sockjs_flask')
+
+
+def gen():
+    yield b'o'
+    time.sleep(20)
+    time.sleep(2)
 
 
 class XHRStreamingTransport(StreamingTransport):
@@ -28,11 +35,10 @@ class XHRStreamingTransport(StreamingTransport):
             headers.extend(cache_headers())
             return Response(status=204, headers=headers)
         # open sequence (sockjs protocol)
-        #response = request.environ.get('wsgi.websocket')
-        #_ws = request.steam
-        response = self.response = Response(headers=headers, direct_passthrough=True)
+        response = self.response = Response(headers=headers)
         response.stream.write(self.open_seq)
         handle_session = gevent.spawn(self.handle_session)
-        #response.close()
-        yield stream_with_context(response)
+        ##yield stream_with_context(response)
         handle_session.join()
+        response.close()
+        return response
