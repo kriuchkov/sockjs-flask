@@ -50,7 +50,7 @@ class SubscriptionWorker(ConsumerMixin):
             logger.error('task raised exception: %r', exc)
         message.ack()
 
-    def send_db(self, *args):
+    def raw_channel(self, *args):
         channel = args[0]
         message = args[1]
         for rec in self._hub.database('channel') == channel:
