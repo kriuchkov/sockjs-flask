@@ -29,7 +29,6 @@ class XHRSendTransport(Transport):
         except:
             return InternalServerError(text="Broken JSON encoding.")
 
-        print(messages)
         self.session._remote_message(messages)
 
         headers = list(((hdrs.CONTENT_TYPE, 'text/plain; charset=UTF-8'),

@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="sockjs-flask",
-    version="0.2.0",
+    version="0.2.2",
     url="https://github.com/borntyping/cookiecutter-pypackage-minimal",
 
     author="Kryuchkov Nikita",
