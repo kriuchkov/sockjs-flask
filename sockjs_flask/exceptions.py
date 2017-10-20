@@ -1,6 +1,3 @@
-"""
-Exceptions
-"""
 
 
 class SockjsException(Exception):
