@@ -1,4 +1,5 @@
 gevent
+kombu
 gevent-websocket
 flask
 multidict

@@ -1,20 +1,19 @@
+# Import kombu modules
 from kombu import Consumer, Exchange, Queue, Connection
 from kombu.mixins import ConsumerMixin
 from kombu.common import maybe_declare
 from kombu.pools import producers
 from kombu.utils import  reprcall
 from kombu.log import get_logger
-
-from .protocol import message_frame
-from .database import create_db
-
+# Import sockjs_flask modules
+from sockjs_flask.protocol import message_frame
+from sockjs_flask.database import create_db
 
 import gevent
 import weakref
 
 
 logger = get_logger(__name__)
-
 
 exchange = Exchange('subscription1', type='direct', auto_delet=True, delivery_mode=1)
 

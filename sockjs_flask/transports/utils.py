@@ -7,8 +7,12 @@ import http.cookies
 CACHE_CONTROL = 'no-store, no-cache, no-transform, must-revalidate, max-age=0'
 
 
-def cors_headers(headers, nocreds=False):
+def cors_headers(headers, force=False):
     origin = headers.get(hdrs.ORIGIN, '*')
+
+    if force:
+        origin = '*'
+
     cors = ((hdrs.ACCESS_CONTROL_ALLOW_ORIGIN, origin),)
 
     ac_headers = headers.get(hdrs.ACCESS_CONTROL_REQUEST_HEADERS)
