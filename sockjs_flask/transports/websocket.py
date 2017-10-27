@@ -11,7 +11,6 @@ import gevent
 import logging
 
 
-logging.basicConfig(format='%(asctime)s, %(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d][%(module)s:%(funcName)s] - %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
 log = logging.getLogger('sockjs_flask')
 
 

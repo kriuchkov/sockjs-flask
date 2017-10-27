@@ -15,6 +15,7 @@ from . import hdrs
 import json
 import random
 import hashlib
+import logging
 
 
 
@@ -28,6 +29,7 @@ def _gen_endpoint_name():
 
 def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disable_transports=(), broker_url='',
                  sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js', cookie_needed=True):
+
 
     assert callable(handler), handler
     router = app.add_url_rule
