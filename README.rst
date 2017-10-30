@@ -61,11 +61,6 @@ Requirements
 - gevent
 - gevent-websocket
 
-Compatibility
--------------
-
-Licence
--------
 
 Authors
 -------
