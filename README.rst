@@ -56,11 +56,11 @@ To run chat example use following command::
 Requirements
 ^^^^^^^^^^^^
 
-- Python 3.4
-- gunicorn 19.2.0
+- Python >= 3.4
+- gunicorn
 - gevent
 - gevent-websocket
-
+- kombu (for subscription)
 
 Authors
 -------
