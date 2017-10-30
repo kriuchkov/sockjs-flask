@@ -18,7 +18,6 @@ import hashlib
 import logging
 
 
-
 def get_manager(name, app):
     return app['__sockjs_managers__'][name]
 
@@ -29,7 +28,6 @@ def _gen_endpoint_name():
 
 def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disable_transports=(), broker_url='',
                  sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js', cookie_needed=True):
-
 
     assert callable(handler), handler
     router = app.add_url_rule
@@ -73,7 +71,10 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
 
 class SockJSRoute(object):
 
-    def __init__(self, name, manager, sockjs_cdn, handlers, disable_transports, cookie_needed=True):
+    def __init__(self, name, manager, sockjs_cdn, handlers, disable_transports, cookie_needed=True, debug=False):
+        # Protected
+        self.__debug = debug
+        # Public
         self.name = name
         self.manager = manager
         self.handlers = handlers
@@ -82,6 +83,13 @@ class SockJSRoute(object):
         self.iframe_html = (IFRAME_HTML % sockjs_cdn).encode('utf-8')
         self.iframe_html_hxd = hashlib.md5(self.iframe_html).hexdigest()
 
+    def get_manager(self):
+        """ Get session manager """
+        m = self.manager
+        if not m.started:
+            m.start()
+        return m
+
     def handler(self, server, session, transport):
         tid = transport
 
@@ -89,15 +97,11 @@ class SockJSRoute(object):
             return NotFound()
 
         create, transport = self.handlers[tid]
-        # session
-        manager = self.manager
-        if not manager.started:
-            manager.start()
+        manager = self.get_manager()
 
         sid = session
         if not sid or '.' in sid or '.' in server:
             return NotFound()
-
         try:
             session = manager.get(sid, create, request=request)
         except KeyError:
@@ -126,20 +130,20 @@ class SockJSRoute(object):
             return exc
 
     def info(self):
-        resp = Response()
-        resp.headers[hdrs.CONTENT_TYPE] = 'application/json;charset=UTF-8'
-        resp.headers[hdrs.CACHE_CONTROL] = CACHE_CONTROL
-        resp.headers.extend(cors_headers(request.headers))
-
         info = {'entropy': random.randint(1, 2147483647),
                 'websocket': 'websocket' not in self.disable_transports,
                 'cookie_needed': self.cookie_needed,
                 'origins': ['*:*']}
+        resp = Response()
+        resp.headers[hdrs.CONTENT_TYPE] = 'application/json;charset=UTF-8'
+        resp.headers[hdrs.CACHE_CONTROL] = CACHE_CONTROL
+        resp.headers.extend(cors_headers(request.headers))
         resp.text = json.dumps(info)
         return resp
 
-    def info_options(self):
-        resp = Response(status12=204)
+    @staticmethod
+    def info_options():
+        resp = Response(status=204)
         resp.headers[hdrs.CONTENT_TYPE] = 'application/json;charset=UTF-8'
         resp.headers[hdrs.CACHE_CONTROL] = CACHE_CONTROL
         resp.headers[hdrs.ACCESS_CONTROL_ALLOW_METHODS] = 'OPTIONS, GET'
