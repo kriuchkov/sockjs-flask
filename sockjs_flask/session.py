@@ -30,24 +30,31 @@ class Session(object):
     ``timeout``: Session timeout
     """
 
-    manager = None
-    acquired = False
-    state = STATE_NEW
-    interrupted = False
-    exception = None
+    __slots__ = (
+        'id', 'acquired', 'state', 'interrupted', 'exception', 'manager', 'handler', 'expired', 'timeout',
+        'expires', '_hits', '_heartbeats', '_heartbeat_transport', '_debug', '_waiter', '_queue', 'registry'
+    )
 
     def __init__(self, id, handler, timeout=timedelta(seconds=5), debug=True):
-        self.id = id
-        self.handler = handler
-        self.expired = False
-        self.timeout = timeout
-        self.expires = datetime.now() + timeout
+        # Protected
+        self.manager = None
+        self.acquired = False
+        self.state = STATE_NEW
+        self.interrupted = False
+        self.exception = None
+        # Private
         self._hits = 0
         self._heartbeats = 0
         self._heartbeat_transport = False
         self._debug = debug
         self._waiter = None
         self._queue = Queue()
+        # Public
+        self.id = id
+        self.handler = handler
+        self.expired = False
+        self.timeout = timeout
+        self.expires = datetime.now() + timeout
 
     def __str__(self):
         result = ['id=%r' % (self.id,)]
@@ -68,9 +75,7 @@ class Session(object):
         return ' '.join(result)
 
     def _tick(self, timeout=None):
-        """
-        Bump the TTL of the session.
-        """
+        """ Bump the TTL of the session.   """
         log.info("Update expires time {} for session".format(self.expires, self.id))
         self.expired = False
         if timeout is None:
@@ -226,14 +231,19 @@ _queues =[
 
 
 class SessionManager(dict):
-    """
-    A basic session manager.
-    """
+    """ A basic session manager """
 
-    _hb_handle = None  # heartbeat event loop timer
-    _hb_task = None  # gc task
+    __slots__ = (
+        'name', 'route_name', 'app', 'handler', 'factory', 'hub', 'acquired', 'session', 'heartbeat', 'timeout',
+        'debug', 'broker_url', 'sessions', '_hb_handle', '_hb_task', 'registry'
+    )
 
-    def __init__(self, name, app, handler, broker_url=None, hub=None, heartbeat=25.0, timeout=timedelta(seconds=5), factory=Session, debug=False):
+    def __init__(self, name, app, handler, broker_url=None, hub=None, heartbeat=25.0,
+                 timeout=timedelta(seconds=5), factory=Session, debug=False):
+        # Private
+        self._hb_handle = None  # heartbeat event loop timer
+        self._hb_task = None  # gc task
+        # Public
         self.name = name
         self.route_name = 'sockjs-url-%s' % name
         self.app = app
@@ -351,9 +361,7 @@ class SessionManager(dict):
                 yield session
 
     def clear(self):
-        """
-         Manually expire all sessions in the pool.
-        """
+        """ Manually expire all sessions in the pool """
         for session in list(self.values()):
             if session.state != STATE_CLOSED:
                 session._remote_closed()

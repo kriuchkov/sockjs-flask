@@ -2,5 +2,6 @@ gevent
 kombu
 gevent-websocket
 flask
+werkzeug
 multidict
 werkzeug

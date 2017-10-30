@@ -1,16 +1,16 @@
 from flask import Response, request
 from werkzeug.exceptions import InternalServerError, NotFound, HTTPException
 
-from .session import SessionManager
-from .protocol import IFRAME_HTML
-from .transports import handlers
-from .transports.utils import CACHE_CONTROL
-from .transports.utils import session_cookie
-from .transports.utils import cors_headers
-from .transports.utils import cache_headers
-from .transports.rawwebsocket import RawWebSocketTransport
-from .sessions.memory import MemorySession
-from . import hdrs
+from sockjs_flask.session import SessionManager
+from sockjs_flask.protocol import IFRAME_HTML
+from sockjs_flask.transports import handlers
+from sockjs_flask.transports.utils import CACHE_CONTROL
+from sockjs_flask.transports.utils import session_cookie
+from sockjs_flask.transports.utils import cors_headers
+from sockjs_flask.transports.utils import cache_headers
+from sockjs_flask.transports.rawwebsocket import RawWebSocketTransport
+from sockjs_flask.sessions.memory import MemorySession
+from sockjs_flask import hdrs
 
 import json
 import random
@@ -30,6 +30,7 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
                  sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js', cookie_needed=True):
 
     assert callable(handler), handler
+
     router = app.add_url_rule
 
     if not name:
@@ -71,6 +72,10 @@ def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disab
 
 class SockJSRoute(object):
 
+    __slots__ = (
+        '__debug', 'name', 'manager', 'handlers', 'disable_transports', 'cookie_needed',
+        'iframe_html', 'iframe_html_hxd')
+
     def __init__(self, name, manager, sockjs_cdn, handlers, disable_transports, cookie_needed=True, debug=False):
         # Protected
         self.__debug = debug
@@ -82,6 +87,10 @@ class SockJSRoute(object):
         self.cookie_needed = cookie_needed
         self.iframe_html = (IFRAME_HTML % sockjs_cdn).encode('utf-8')
         self.iframe_html_hxd = hashlib.md5(self.iframe_html).hexdigest()
+
+    def __del__(self):
+        self.manager.clear()
+        self.manager.stop()
 
     def get_manager(self):
         """ Get session manager """

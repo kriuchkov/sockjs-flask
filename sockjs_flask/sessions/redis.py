@@ -3,24 +3,30 @@ from .. import session
 
 import logging
 import gevent
+import redis
+
 
 log = logging.getLogger('sockjs_flask')
 
 
-class MemorySession(session.Session):
-    """
-    In memory session with a ``gevent.pool.Queue`` as the message store.
-    """
+class RedisSession(session.Session):
+    """ In redis session  """
 
+    __slots__ = (
+        'redis_config'
+    )
 
     def __init__(self, *args, **kwargs):
-        super(MemorySession, self).__init__(*args, **kwargs)
+        super(MemorySession, self).__init__(*args, redis_config=None, **kwargs)
+        if not redis_config:
+            raise Exception('redis_config not found')
 
-        self._queue = Queue()
+        self._queue = redis.StrictRedis(**redis_config)
 
     def add_message(self, frame, data):
         log.info('session closed: %s', self.id)
         self._queue.put_nowait((frame, data))
+        self._queue.set((frame, data))
         #waiter = self._waiter
         #if waiter is not None:
         #    self._waiter = None
