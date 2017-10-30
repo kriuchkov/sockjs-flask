@@ -38,9 +38,28 @@ Client side code::
 
 Installation
 ------------
+1. Install virtualenv::
+
+    $ wget https://raw.github.com/pypa/virtualenv/master/virtualenv.py
+    $ python3.6 ./virtualenv.py --no-site-packages sockjs
+
+3. Install sockjs-flask from pypi and then install::
+
+    $ pip install sockjs-flask
+    $ cd sockjs
+    $ ../sockjs/bin/python setup.py
+
+To run chat example use following command::
+
+    $ ./sockjs/bin/python ./sockjs-flask/examples/main.py
 
 Requirements
 ^^^^^^^^^^^^
+
+- Python 3.4
+- gunicorn 19.2.0
+- gevent
+- gevent-websocket
 
 Compatibility
 -------------
