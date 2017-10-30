@@ -74,15 +74,14 @@ class StreamingTransport(Transport):
                             frame, text = self.session._wait()
 
                         if frame == FRAME_CLOSE:
-                            self.session._remote_closed()
                             self.send(text)
+                            self.session._remote_closed()
                             return
                         else:
                             stop = self.send(text)
-                            if stop:
-                                break
+                            #if not stop:
+                            break
                 except Exception as exc:
-                    print(exc)
                     self.session._remote_close(exc=exc)
                     self.session._remote_closed()
 
