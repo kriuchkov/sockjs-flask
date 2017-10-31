@@ -81,7 +81,7 @@ class Session(object):
         else:
             self.expires = datetime.now() + timeout
 
-    def _acquire(self, manager, heartbeat=True):
+    def _acquire(self, manager=None, heartbeat=True):
         self.acquired = True
         self.manager = manager
         self._heartbeat_transport = heartbeat
@@ -130,9 +130,7 @@ class Session(object):
             raise SessionIsClosed()
 
     def _remote_close(self, exc=None):
-        """
-        Close session from remote.
-        """
+        """ Close session from remote. """
         if self.state in (STATE_CLOSING, STATE_CLOSED):
             return
 
@@ -185,9 +183,7 @@ class Session(object):
         self.expired = True
 
     def send(self, msg):
-        """
-        Send message
-        """
+        """ Send message """
         assert isinstance(msg, str), 'String is required'
         if self._debug:
             log.info('Оutgoing message from send: %s, %s', self.id, str(msg)[:200])
@@ -197,9 +193,7 @@ class Session(object):
         self.add_message(FRAME_MESSAGE, msg)
 
     def send_frame(self, frm):
-        """
-        Send message frame to client.
-        """
+        """ Send message frame to client """
         if self._debug:
             log.info('Оutgoing message from send_frame: %s, %s', self.id, frm[:200])
         if self.state != STATE_OPEN:
