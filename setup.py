@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="sockjs-flask",
-    version="0.2.5",
+    version="0.3",
     url="https://github.com/pycodi/sockjs-flask",
     author="Kryuchkov Nikita",
     author_email="pycodi@hotmail.com",

@@ -16,7 +16,7 @@ from .protocol import MSG_CLOSED
 from .protocol import message_frame
 from .route import get_manager, add_endpoint, SockJSRoute
 
-__version__ = '0.2.2'
+__version__ = '0.3'
 __author__ = 'Kryuchkov Nikita <pycodi@hotmail.com>'
 __all__ = ('get_manager', 'add_endpoint', 'Session', 'SessionManager', 'message_frame', 'SockJSRoute',
            'SessionIsClosed', 'SessionIsAcquired', 'STATE_NEW', 'STATE_OPEN', 'STATE_CLOSING',

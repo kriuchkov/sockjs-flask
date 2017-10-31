@@ -1,18 +1,12 @@
 
 
 class SockjsException(Exception):
-    """
-    Base sockjs exception.
-    """
+    """ Base sockjs exception """
 
 
 class SessionIsAcquired(SockjsException):
-    """
-    Session is acquired.
-    """
+    """ Session is acquired """
 
 
 class SessionIsClosed(SockjsException):
-    """
-    Session is closed.
-    """
+    """ Session is closed """

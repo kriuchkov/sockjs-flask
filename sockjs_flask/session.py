@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from gevent.queue import Channel, Queue
 
 from .protocol import STATE_NEW, STATE_OPEN, STATE_CLOSING, STATE_CLOSED
-from .protocol import FRAME_OPEN, FRAME_CLOSE
+from .protocol import FRAME_OPEN, FRAME_CLOSE, CONN_CLOSED
 from .protocol import FRAME_MESSAGE, FRAME_MESSAGE_BLOB, FRAME_HEARTBEAT
 from .protocol import MSG_CLOSE, MSG_MESSAGE
 from .protocol import close_frame, message_frame, messages_frame
@@ -37,7 +37,6 @@ class Session(object):
         # Protected
         self.manager = None
         self.acquired = False
-        self.state = STATE_NEW
         self.interrupted = False
         self.exception = None
         # Private
@@ -50,6 +49,7 @@ class Session(object):
         # Public
         self.id = id
         self.handler = handler
+        self.state = STATE_NEW
         self.expired = False
         self.timeout = timeout
         self.expires = datetime.now() + timeout
@@ -88,7 +88,7 @@ class Session(object):
         self._tick()
         self._hits += 1
         if self.state == STATE_NEW:
-            log.debug('open session: %s', self.id)
+            log.info('[sockjs_flask] Open session: %s', self.id)
             self.state = STATE_OPEN
             self.add_message(FRAME_OPEN, FRAME_OPEN)
             try:
@@ -97,10 +97,11 @@ class Session(object):
                 self.state = STATE_CLOSING
                 self.exception = exc
                 self.interrupted = True
-                self.add_message(FRAME_CLOSE, (3000, 'Internal error'))
+                self.add_message(FRAME_CLOSE, *CONN_CLOSED)
                 log.exception('Exception in open session handling.')
 
     def _release(self):
+        log.info('[sockjs_flask] Session: %s release on %s', self.id, datetime.now())
         self.acquired = False
         self.manager = None
         self._heartbeat_transport = False
@@ -109,15 +110,15 @@ class Session(object):
         self.expired = False
         self._tick()
         self._heartbeats += 1
-        if self._heartbeat:
-            self.add_message(FRAME_HEARTBEAT, FRAME_HEARTBEAT)
+        self.add_message(FRAME_HEARTBEAT, FRAME_HEARTBEAT)
 
     def _wait(self, pack=True):
+        """
+        Get packet from queue and return frame pack with data
+        :param pack: Type return package
+        :return: tuple
+        """
         log.info("Waiter {} session and queue {}".format(self._waiter, self._queue))
-        #if not self._queue and self.state != STATE_CLOSED:
-        #    assert not self._waiter
-        #    self._waiter = AsyncResult()
-
         if self._queue:
             frame, payload = self._queue.get()
             if pack:
