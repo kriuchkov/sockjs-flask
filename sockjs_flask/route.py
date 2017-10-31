@@ -74,7 +74,7 @@ class SockJSRoute(object):
 
     __slots__ = (
         '__debug', 'name', 'manager', 'handlers', 'disable_transports', 'cookie_needed',
-        'iframe_html', 'iframe_html_hxd')
+        'iframe_html', 'iframe_html_hxd', '__weakref__')
 
     def __init__(self, name, manager, sockjs_cdn, handlers, disable_transports, cookie_needed=True, debug=False):
         # Protected

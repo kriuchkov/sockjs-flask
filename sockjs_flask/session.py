@@ -1,16 +1,13 @@
 from datetime import datetime, timedelta
 from gevent.queue import Channel, Queue
 
-
 from .protocol import STATE_NEW, STATE_OPEN, STATE_CLOSING, STATE_CLOSED
 from .protocol import FRAME_OPEN, FRAME_CLOSE
 from .protocol import FRAME_MESSAGE, FRAME_MESSAGE_BLOB, FRAME_HEARTBEAT
-from .exceptions import SessionIsAcquired, SessionIsClosed
-
 from .protocol import MSG_CLOSE, MSG_MESSAGE
 from .protocol import close_frame, message_frame, messages_frame
 from .protocol import SockjsMessage, OpenMessage, ClosedMessage
-
+from .exceptions import SessionIsAcquired, SessionIsClosed
 from .subscription import SubscriptionHub
 
 import logging
@@ -32,7 +29,8 @@ class Session(object):
 
     __slots__ = (
         'id', 'acquired', 'state', 'interrupted', 'exception', 'manager', 'handler', 'expired', 'timeout',
-        'expires', '_hits', '_heartbeats', '_heartbeat_transport', '_debug', '_waiter', '_queue', 'registry'
+        'expires', '_hits', '_heartbeats', '_heartbeat_transport', '_debug', '_waiter',
+        '_queue', 'registry', '__weakref__'
     )
 
     def __init__(self, id, handler, timeout=timedelta(seconds=5), debug=True):
@@ -235,7 +233,7 @@ class SessionManager(dict):
 
     __slots__ = (
         'name', 'route_name', 'app', 'handler', 'factory', 'hub', 'acquired', 'session', 'heartbeat', 'timeout',
-        'debug', 'broker_url', 'sessions', '_hb_handle', '_hb_task', 'registry'
+        'debug', 'broker_url', 'sessions', '_hb_handle', '_hb_task', 'registry', '__weakref__'
     )
 
     def __init__(self, name, app, handler, broker_url=None, hub=None, heartbeat=25.0,
