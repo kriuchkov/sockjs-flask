@@ -9,7 +9,7 @@ patch_all(thread=False)
 
 logging.basicConfig(
         format='%(asctime)s, %(levelname)-3s [%(filename)s:%(lineno)d][%(module)s:%(funcName)s] - %(message)s',
-        datefmt='%H:%M:%S', level=logging.INFO)
+        datefmt='%H:%M:%S', level=logging.DEBUG)
 
 
 def test_session():

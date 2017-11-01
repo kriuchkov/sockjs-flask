@@ -203,15 +203,11 @@ class Session(object):
         self.add_message(FRAME_MESSAGE_BLOB, frm)
 
     def close(self, code=3000, reason='Go away!'):
-        """
-        Close session
-        """
-        if self.state in (STATE_CLOSING, STATE_CLOSED):
-            return
-        if self._debug:
-            log.debug('close session: %s', self.id)
-        self.state = STATE_CLOSING
-        self.add_message(FRAME_CLOSE, (code, reason))
+        """ Close session """
+        if self.state not in (STATE_CLOSING, STATE_CLOSED):
+            self.state = STATE_CLOSING
+            self.add_message(FRAME_CLOSE, (code, reason))
+            if self._debug: log.debug('[sockjs_flask] Session closed: %s', self.id)
 
 
 _marker = object()
