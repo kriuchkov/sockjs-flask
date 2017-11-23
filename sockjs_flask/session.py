@@ -118,7 +118,7 @@ class Session(object):
         :param pack: Type return package
         :return: tuple
         """
-        log.info("Waiter {} session and queue {}".format(self._waiter, self._queue))
+        #log.info("Waiter {} session and queue {}".format(self._waiter, self._queue))
         if self._queue:
             frame, payload = self._queue.get()
             if pack:
