@@ -50,7 +50,7 @@ class StreamingTransport(Transport):
             return False
 
     def handle_session(self):
-        #assert self.response is not None, 'Response is not specified.'
+        assert self.response is not None, 'Response is not specified.'
 
         if self.session.interrupted:
             self.send(close_frame(*protocol.CONN_INTERRUPTED))
@@ -76,11 +76,12 @@ class StreamingTransport(Transport):
                         if frame == FRAME_CLOSE:
                             self.send(text)
                             self.session._remote_closed()
-                            return
+                            self.response.close()
+                            break
                         else:
                             stop = self.send(text)
-                            #if not stop:
-                            break
+                            if not stop:
+                                break
                 except Exception as exc:
                     self.session._remote_close(exc=exc)
                     self.session._remote_closed()

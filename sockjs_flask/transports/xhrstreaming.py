@@ -12,12 +12,6 @@ import time
 log = logging.getLogger('sockjs_flask')
 
 
-def gen():
-    yield b'o'
-    time.sleep(20)
-    time.sleep(2)
-
-
 class XHRStreamingTransport(StreamingTransport):
 
     maxsize = 131072
@@ -38,7 +32,7 @@ class XHRStreamingTransport(StreamingTransport):
         # open sequence (sockjs protocol)
         response = self.response = Response(headers=headers)
         response.stream.write(self.open_seq)
-        handle_session = gevent.spawn(self.handle_session)
-        handle_session.join()
-        response.close()
+        self.handle_session()
+        #handle_session = gevent.spawn(self.handle_session)
+        #handle_session.join()
         return response
