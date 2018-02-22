@@ -26,8 +26,10 @@ def _gen_endpoint_name():
     return 'n' + str(random.randint(1000, 9999))
 
 
-def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None, disable_transports=(), broker_url='',
-                 sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js', cookie_needed=True):
+def add_endpoint(app, handler, *, name='', prefix='/sockjs', manager=None,
+                 disable_transports=(), broker_url=None,
+                 sockjs_cdn='https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.js',
+                 cookie_needed=True):
 
     assert callable(handler), handler
 

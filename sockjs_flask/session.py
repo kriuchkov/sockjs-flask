@@ -252,7 +252,7 @@ class SessionManager(dict):
 
     def _hub(self):
         """ Initialization subscription hub """
-        if not self.hub:
+        if not self.hub and self.broker_url:
             self.hub = SubscriptionHub(self, self.broker_url).start()
 
     def _heartbeat(self):
